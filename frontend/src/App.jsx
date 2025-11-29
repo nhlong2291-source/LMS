@@ -1,14 +1,14 @@
 import React from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
-import Login from "./pages/Login";
-import Courses from "./pages/Courses";
-import CourseDetail from "./pages/CourseDetail";
-import ModuleLessons from "./pages/ModuleLessons";
-import Lesson from "./pages/Lesson";
+import Login from "./pages/Auth/Login";
+import Courses from "./pages/Courses/CoursesList";
+import CourseDetail from "./pages/Courses/CourseDetail";
+import ModuleLessons from "./pages/Courses/ModuleLessons";
+import Lesson from "./pages/Courses/LessonView";
 import Progress from "./pages/Progress";
 import Forum from "./pages/Forum";
-import Shop from "./pages/Shop";
-import NavBar from "./components/NavBar";
+import Shop from "./pages/Shop/ShopList";
+import NavBar from "./components/layout/NavBar";
 import { useAuth } from "./contexts/AuthContext";
 
 function RequireAuth({ children }) {

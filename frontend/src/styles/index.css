@@ -1,0 +1,12 @@
+/* Global stylesheet placeholder */
+:root {
+  --color-primary: #1976d2;
+  --color-bg: #f5f7fb;
+}
+
+body {
+  margin: 0;
+  font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial;
+  background: var(--color-bg);
+}
