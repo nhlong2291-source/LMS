@@ -1,4 +1,29 @@
+// Lấy danh sách tin tức theo phòng ban, role, trạng thái
+export async function getNewsByDepartment(req, res) {
+  try {
+    const { departments, status } = req.query;
+    const { role, department: userDept } = req.user;
+    let filter = {};
+    if (departments) {
+      const deptArr = departments.split(",");
+      filter.department = { $in: deptArr };
+    }
+    if (status) {
+      filter.status = status;
+    }
+    if (role === "manager" || role === "instructor") {
+      filter.department = userDept;
+    }
+    const news = await News.find(filter);
+    res.json(news);
+  } catch (err) {
+    const log = req?.logger ?? logger;
+    log.error(err);
+    res.status(500).json({ error: "Server error" });
+  }
+}
 import News from "../models/News.js";
+import logger from "../utils/logger.js";
 
 // Tạo tin tức
 export async function createNews(req, res) {
@@ -7,6 +32,8 @@ export async function createNews(req, res) {
     await news.save();
     res.status(201).json(news);
   } catch (err) {
+    const log = req?.logger ?? logger;
+    log.error(err);
     res.status(400).json({ error: err.message });
   }
 }
@@ -17,6 +44,8 @@ export async function getAllNews(req, res) {
     const newsList = await News.find();
     res.json(newsList);
   } catch (err) {
+    const log = req?.logger ?? logger;
+    log.error(err);
     res.status(500).json({ error: err.message });
   }
 }
@@ -30,6 +59,8 @@ export async function updateNews(req, res) {
     if (!news) return res.status(404).json({ error: "News not found" });
     res.json(news);
   } catch (err) {
+    const log = req?.logger ?? logger;
+    log.error(err);
     res.status(400).json({ error: err.message });
   }
 }
@@ -41,6 +72,8 @@ export async function deleteNews(req, res) {
     if (!news) return res.status(404).json({ error: "News not found" });
     res.json({ message: "News deleted" });
   } catch (err) {
+    const log = req?.logger ?? logger;
+    log.error(err);
     res.status(500).json({ error: err.message });
   }
 }
@@ -56,6 +89,8 @@ export async function publishNews(req, res) {
     if (!news) return res.status(404).json({ error: "News not found" });
     res.json(news);
   } catch (err) {
+    const log = req?.logger ?? logger;
+    log.error(err);
     res.status(400).json({ error: err.message });
   }
 }

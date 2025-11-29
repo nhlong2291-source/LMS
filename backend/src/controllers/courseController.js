@@ -1,6 +1,39 @@
+// Lấy danh sách khóa học theo phòng ban, role, trạng thái
+export async function getCoursesByDepartment(req, res) {
+  try {
+    const { departments, status } = req.query; // ?departments=IT,HR&status=active
+    const { role, department: userDept } = req.user;
+    let filter = {};
+    // Lọc theo phòng ban
+    if (departments) {
+      const deptArr = departments.split(",");
+      filter.department = { $in: deptArr };
+    }
+    // Lọc theo trạng thái (nếu có trường status)
+    if (status) {
+      filter.status = status;
+    }
+    // Nếu là manager/instructor, chỉ cho xem phòng ban mình quản lý
+    if (role === "manager" || role === "instructor") {
+      filter.department = userDept;
+    }
+    // Nếu là admin, xem tất cả
+    // Nếu là student, chỉ xem khóa học của mình (giả sử có trường enrolledUsers)
+    if (role === "student") {
+      filter.enrolledUsers = req.user._id;
+    }
+    const courses = await Course.find(filter);
+    res.json(courses);
+  } catch (err) {
+    const log = req?.logger ?? logger;
+    log.error(err);
+    res.status(500).json({ error: "Server error" });
+  }
+}
 import Course from "../models/Course.js";
 import Module from "../models/Module.js";
 import Lesson from "../models/Lesson.js";
+import logger from "../utils/logger.js";
 // Tạo module cho course
 export async function createModule(req, res) {
   try {
@@ -10,7 +43,24 @@ export async function createModule(req, res) {
     await module.save();
     res.status(201).json(module);
   } catch (err) {
+    const log = req?.logger ?? logger;
+    log.error(err);
     res.status(400).json({ error: err.message });
+  }
+}
+
+// Lấy modules cho một course (public)
+export async function getModulesByCourse(req, res) {
+  try {
+    const courseId = req.params.courseId;
+    const modules = await Module.find({ course: courseId })
+      .populate("lessons")
+      .lean();
+    res.json(modules);
+  } catch (err) {
+    const log = req?.logger ?? logger;
+    log.error(err);
+    res.status(500).json({ error: err.message });
   }
 }
 
@@ -30,6 +80,8 @@ export async function createLesson(req, res) {
     await lesson.save();
     res.status(201).json(lesson);
   } catch (err) {
+    const log = req?.logger ?? logger;
+    log.error(err);
     res.status(400).json({ error: err.message });
   }
 }
@@ -41,6 +93,8 @@ export async function createCourse(req, res) {
     await course.save();
     res.status(201).json(course);
   } catch (err) {
+    const log = req?.logger ?? logger;
+    log.error(err);
     res.status(400).json({ error: err.message });
   }
 }
@@ -51,6 +105,8 @@ export async function getAllCourses(req, res) {
     const courses = await Course.find();
     res.json(courses);
   } catch (err) {
+    const log = req?.logger ?? logger;
+    log.error(err);
     res.status(500).json({ error: err.message });
   }
 }
@@ -58,10 +114,16 @@ export async function getAllCourses(req, res) {
 // Lấy một khóa học
 export async function getCourseById(req, res) {
   try {
-    const course = await Course.findById(req.params.id);
+    const course = await Course.findById(req.params.id).lean();
     if (!course) return res.status(404).json({ error: "Course not found" });
-    res.json(course);
+    // Fetch modules that belong to this course and populate lessons
+    const modules = await Module.find({ course: course._id })
+      .populate("lessons")
+      .lean();
+    res.json({ ...course, modules });
   } catch (err) {
+    const log = req?.logger ?? logger;
+    log.error(err);
     res.status(500).json({ error: err.message });
   }
 }
@@ -75,6 +137,8 @@ export async function updateCourse(req, res) {
     if (!course) return res.status(404).json({ error: "Course not found" });
     res.json(course);
   } catch (err) {
+    const log = req?.logger ?? logger;
+    log.error(err);
     res.status(400).json({ error: err.message });
   }
 }
@@ -86,6 +150,8 @@ export async function deleteCourse(req, res) {
     if (!course) return res.status(404).json({ error: "Course not found" });
     res.json({ message: "Course deleted" });
   } catch (err) {
+    const log = req?.logger ?? logger;
+    log.error(err);
     res.status(500).json({ error: err.message });
   }
 }

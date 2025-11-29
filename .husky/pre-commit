@@ -1,9 +1,15 @@
 #!/bin/sh
 . "$(dirname "$0")/_/husky.sh"
 
-# Run backend logger lint before allowing commits
-cd backend || exit 0
-npm run lint:logger || {
-  echo "\nPre-commit: 'npm run lint:logger' failed. Fix logger usage in controllers before committing.\n"
+# Only run lint on backend controllers when staged files include backend controllers
+CHANGED=$(git diff --cached --name-only --relative | grep -E '^backend/src/controllers/.*\.js$' || true)
+if [ -z "$CHANGED" ]; then
+  # No backend controller files changed — skip lint
+  exit 0
+fi
+
+# Run eslint only on the changed controller files
+npx eslint $CHANGED --max-warnings=0 || {
+  echo "\nPre-commit: eslint failed for backend controllers. Fix and re-stage before committing.\n"
   exit 1
 }

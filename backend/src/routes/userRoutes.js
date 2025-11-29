@@ -2,12 +2,23 @@ import express from "express";
 import User from "../models/User.js";
 import jwt from "jsonwebtoken";
 import { jwtAuth } from "../middleware/jwtAuth.js";
+import { getUsersByDepartment } from "../controllers/userController.js";
+import rateLimit from "express-rate-limit";
 
 const router = express.Router();
 
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10,
+  message: { error: "Too many login attempts, please try again later." },
+});
+
 // Đăng ký
 router.post("/register", async (req, res) => {
-  const { username, password, email, role } = req.body;
+  const { username, password, email, role, department } = req.body;
+  if (!department) {
+    return res.status(400).json({ error: "Department is required" });
+  }
   try {
     const existing = await User.findOne({ username });
     if (existing)
@@ -17,6 +28,7 @@ router.post("/register", async (req, res) => {
       password,
       email,
       role: role || "student",
+      department,
     });
     await user.save();
     res.status(201).json({ message: "Register success" });
@@ -26,14 +38,24 @@ router.post("/register", async (req, res) => {
 });
 
 // Đăng nhập
-router.post("/login", async (req, res) => {
-  const { username, password } = req.body;
-  const user = await User.findOne({ username });
-  if (!user || !(await user.comparePassword(password))) {
+router.post("/login", loginLimiter, async (req, res) => {
+  const { username, password, email } = req.body;
+  // allow login by username or email
+  const user = await User.findOne({ $or: [{ username }, { email }] });
+  if (!user) {
+    return res.status(401).json({ error: "Invalid credentials" });
+  }
+  const match = await user.comparePassword(password);
+  if (!match) {
     return res.status(401).json({ error: "Invalid credentials" });
   }
   const token = jwt.sign(
-    { username: user.username, role: user.role },
+    {
+      _id: user._id,
+      username: user.username,
+      role: user.role,
+      department: user.department,
+    },
     process.env.JWT_SECRET,
     { expiresIn: "1h" }
   );
@@ -73,5 +95,8 @@ router.put("/change-password", jwtAuth, async (req, res) => {
   await user.save();
   res.json({ message: "Password changed" });
 });
+
+// Lấy danh sách user theo phòng ban, role, trạng thái
+router.get("/filter", jwtAuth, getUsersByDepartment);
 
 export default router;

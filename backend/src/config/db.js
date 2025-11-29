@@ -1,15 +1,15 @@
 import mongoose from "mongoose";
+import logger from "../utils/logger.js";
 
 export default async function connectDB() {
-  console.log("MONGODB_URI:", process.env.MONGODB_URI);
   try {
     await mongoose.connect(process.env.MONGODB_URI, {
       useNewUrlParser: true,
       useUnifiedTopology: true,
     });
-    console.log("Connected to MongoDB");
+    logger.info("Connected to MongoDB");
   } catch (err) {
-    console.error("Lỗi kết nối với MongoDB", err);
+    logger.error("Lỗi kết nối với MongoDB");
     throw err;
   }
 }

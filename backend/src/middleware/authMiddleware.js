@@ -1,3 +1,23 @@
+// Middleware xác thực JWT
+import jwt from "jsonwebtoken";
+
+export function jwtAuth(req, res, next) {
+  const authHeader = req.headers["authorization"];
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return res.status(401).json({ error: "No token provided" });
+  }
+  const token = authHeader.split(" ")[1];
+  try {
+    // Do not log secrets or tokens in production logs
+    const verified = jwt.verify(token, process.env.JWT_SECRET);
+    req.user = verified;
+    next();
+  } catch (err) {
+    // avoid leaking error details
+    res.status(401).json({ error: "Invalid Token" });
+  }
+}
+
 // Middleware phân quyền
 export function protect(req, res, next) {
   if (req.user) return next();

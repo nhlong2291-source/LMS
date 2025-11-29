@@ -1,13 +1,15 @@
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
+import logger from "../utils/logger.js";
 
 const userSchema = new mongoose.Schema({
   username: { type: String, required: true, unique: true },
   password: { type: String, required: true },
   email: { type: String, required: true, unique: true },
+  department: { type: String, required: true }, // Phòng ban
   role: {
     type: String,
-    enum: ["student", "admin", "teacher"],
+    enum: ["student", "admin", "teacher", "manager", "instructor"],
     default: "student",
   },
   courses: [{ type: mongoose.Schema.Types.ObjectId, ref: "Course" }],
@@ -31,10 +33,12 @@ userSchema.pre("save", async function (next) {
 // Hàm kiểm tra mật khẩu
 userSchema.methods.comparePassword = function (candidatePassword) {
   if (!this.password) {
-    console.error("comparePassword: this.password is undefined");
+    logger.error("comparePassword: this.password is undefined");
     return false;
   }
   return bcrypt.compare(candidatePassword, this.password);
 };
 
-export default mongoose.model("User", userSchema);
+// Kiểm tra xem model "User" đã tồn tại chưa. Nếu có thì dùng lại, chưa có mới tạo mới.
+const User = mongoose.models.User || mongoose.model("User", userSchema);
+export default User;

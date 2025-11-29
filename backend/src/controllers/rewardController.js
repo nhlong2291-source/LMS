@@ -1,8 +1,36 @@
+// Lấy danh sách phần thưởng theo phòng ban, role, trạng thái
+export async function getRewardsByDepartment(req, res) {
+  try {
+    const { departments, status } = req.query;
+    const { role, department: userDept } = req.user;
+    let filter = {};
+    if (departments) {
+      const deptArr = departments.split(",");
+      filter.department = { $in: deptArr };
+    }
+    if (status) {
+      filter.status = status;
+    }
+    if (role === "manager" || role === "instructor") {
+      filter.department = userDept;
+    }
+    if (role === "student") {
+      filter.user = req.user._id;
+    }
+    const rewards = await Reward.find(filter);
+    res.json(rewards);
+  } catch (err) {
+    const log = req?.logger ?? logger;
+    log.error(err);
+    res.status(500).json({ error: "Server error" });
+  }
+}
 import LessonProgress from "../models/LessonProgress.js";
 import Course from "../models/Course.js";
 import Module from "../models/Module.js";
 import Lesson from "../models/Lesson.js";
 import User from "../models/User.js";
+import logger from "../utils/logger.js";
 
 // Tặng GEM khi hoàn thành toàn bộ khóa học
 export async function rewardGemOnCourseComplete(req, res) {
@@ -36,6 +64,8 @@ export async function rewardGemOnCourseComplete(req, res) {
         .json({ error: "Chưa hoàn thành toàn bộ bài học trong khóa học." });
     }
   } catch (err) {
+    const log = req?.logger ?? logger;
+    log.error(err);
     res.status(500).json({ error: err.message });
   }
 }
