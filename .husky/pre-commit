@@ -1,0 +1,9 @@
+#!/bin/sh
+. "$(dirname "$0")/_/husky.sh"
+
+# Run backend logger lint before allowing commits
+cd backend || exit 0
+npm run lint:logger || {
+  echo "\nPre-commit: 'npm run lint:logger' failed. Fix logger usage in controllers before committing.\n"
+  exit 1
+}
