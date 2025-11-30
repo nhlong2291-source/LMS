@@ -69,6 +69,7 @@ export async function createLesson(req, res) {
   try {
     const { name, type, videoUrl, quizCsv, content } = req.body;
     const moduleId = req.params.moduleId;
+    const courseId = req.params.courseId;
     const lesson = new Lesson({
       name,
       type,
@@ -78,7 +79,30 @@ export async function createLesson(req, res) {
       module: moduleId,
     });
     await lesson.save();
-    res.status(201).json(lesson);
+    // Thêm lesson id vào module.lessons để lần gọi getCourseById sẽ thấy bài mới
+    try {
+      await Module.findByIdAndUpdate(moduleId, {
+        $push: { lessons: lesson._id },
+      });
+    } catch (err) {
+      // Nếu update module fail thì log nhưng vẫn trả về lesson đã tạo
+      const log = req?.logger ?? logger;
+      log.error("Failed to push lesson into module.lessons:", err);
+    }
+
+    // Trả về course đã được cập nhật (kèm modules + lessons) để client có thể cập nhật UI ngay
+    try {
+      const course = await Course.findById(courseId).lean();
+      const modules = await Module.find({ course: courseId })
+        .populate("lessons")
+        .lean();
+      return res.status(201).json({ ...course, modules });
+    } catch (err) {
+      // Nếu không thể build course chi tiết thì vẫn trả về lesson
+      const log = req?.logger ?? logger;
+      log.error("Failed to fetch updated course after creating lesson:", err);
+      return res.status(201).json(lesson);
+    }
   } catch (err) {
     const log = req?.logger ?? logger;
     log.error(err);
